@@ -1,6 +1,22 @@
 import tweepy
+from math import log10
 
-import tweepy
+
+def idf(t, D):
+    # D is documents == document list
+    numerator = len(D)
+    denominator = 1 + len([ True for d in D if t in d])
+    return log10(numerator/denominator)
+
+def tfidf(t, d, D):
+    return tf(t,d)*idf(t, D)
+
+#문서 단어 빈도
+def f(t, d):
+    return d.count(t)
+
+def tf(t, d):
+    return 0.5 + 0.5*f(t,d)/max([f(w,d) for w in d])
 
 # == OAuth Authentication ==
 #
@@ -9,56 +25,60 @@ import tweepy
 
 # The consumer keys can be found on your application's Details
 # page located at https://dev.twitter.com/apps (under "OAuth settings")
-consumer_key="lcjGSPnCBjKU8OpRwsD7M0FEO"
-consumer_secret="nHF3Z2W2M8ArXAeJlhDXCbtRPUKkux3TGNlouWEHYB4wjmxHVt"
 
-# The access tokens can be found on your applications's Details
-# page located at https://dev.twitter.com/apps (located
-# under "Your access token")
-access_token="817240287286214656-iRuqc9UzZW2sx6bwfoROtqoLZUmHAyA"
-access_token_secret="VdAaqQpBDooYMEM5Vs2sArLqcUJmblQoZLpF8NmF1dtIH"
 
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 auth.set_access_token(access_token, access_token_secret)
 
 api = tweepy.API(auth)
 
-# If the authentication was successful, you should
-# see the name of the account print out
-# print(api.me().name)
-# public_tweets = api.home_timeline()
-# for tweet in public_tweets:
-#     print(tweet.text)
+category = ['#동물']
+followingtweet=[]
+categorylist=[]
+usertweetlist=[]
+followinglist = []
+hashtaglist=[]
+user_hashtag_tf=[]
 
-
+#카테고리 별 해시태그 추출
 keyword = "#동물"
 #API.search(q, [geocode], [lang], [locale], [result_type], [count], [until], [since_id], [max_id], [include_entities])
 search = api.search(keyword,lang="ko",count=100)
-# print(search)
-list=[]
-
 for tweet in search:
     for hashtag in tweet._json['entities']['hashtags']:
-        list.append(hashtag["text"])
+        categorylist.append(hashtag["text"])
 
-print(list)
+# for t in categorylist:
+#     print(f(t,categorylist))
+
+#사용자 트윗
+user = api.me()._json["id"]
+usertweet = api.user_timeline(count="10")
+for tweet in usertweet:
+    for hashtag in tweet._json["entities"]['hashtags']:
+        hashtaglist.append(hashtag['text'])
+
+
+#팔로잉하는 유저 목록
+#method:: API.friends([id/user_id/screen_name], [cursor], [skip_status], [include_user_entities])
+friend = api.friends(id=user)
+for f in friend:
+    followinglist.append(f._json["id"])             
 
 
 
-# If the application settings are set for "Read and Write" then
-# this line should tweet out the message to your account's
-# timeline. The "Read and Write" setting is on https://dev.twitter.com/apps
-# api.update_status(status='Updating using OAuth authentication via Tweepy!')
+#팔로잉하는 유저의 트윗, 리트윗 
+#method:: API.user_timeline([id/user_id/screen_name], [since_id], [max_id], [count], [page])
+for following in followinglist:
+    for tweet in api.user_timeline(following, count="15"):
+        for hashtag in tweet._json["entities"]['hashtags']:
+            hashtaglist.append(hashtag['text'])
 
 
 
 
-#문서 단어 빈도
-# def f(t,d): 
-#     return float(article_entity_count_dict[d][t]) 
 
-# def tf(t,d): 
-#     return 0.5 + ((0.5) * f(t, d) / max([f(w, d) for w, c in article_entity_count_dict[d].iteritems()])) 
-    
-# def idf(t):
-#     return math.log10(category_number_of_documents[entity_category_count_dict[t]] / len(entity_article_count_dict[t].keys()))
+for t in categorylist:
+    print(0.5 + 0.5*categorylist.count(t)/max([categorylist.count(w) for w in categorylist]))
+
+print("########")
